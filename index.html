@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFTVitya | Auth</title>
+    <style>
+        ::selection { background: #ffffff; color: #000; }
+        :root {
+            --bg: #050505; --card: #0f0f0f; --input: #161616;
+            --accent: #ffffff; --text-dim: #666; --border: #1a1a1a;
+            --success: #00ff88; --error: #ff4444;
+        }
+
+        @keyframes reveal {
+            0% { opacity: 0; filter: blur(20px); transform: translateY(15px); }
+            100% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        body {
+            margin: 0; background: var(--bg); color: #fff;
+            font-family: -apple-system, system-ui, sans-serif;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; height: 100dvh; overflow: hidden;
+        }
+
+        .container {
+            width: 90%; max-width: 360px; padding: 40px 25px;
+            background: var(--card); border-radius: 32px; border: 1px solid var(--border);
+            text-align: center; animation: reveal 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .page { display: none; flex-direction: column; align-items: center; width: 100%; }
+        .page.active { display: flex; }
+
+        .nft-gif { width: 85px; height: 85px; border-radius: 24px; object-fit: cover; border: 1px solid var(--border); margin-bottom: 25px; }
+        .logo { font-size: 28px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 30px; display: block; }
+
+        .form-group { text-align: left; margin-bottom: 18px; width: 100%; position: relative; }
+        label { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 1px; }
+        
+        .req-hint { font-size: 9px; opacity: 0; transition: 0.3s; font-weight: 600; }
+        .req-hint.invalid { opacity: 1; color: var(--error); }
+        .req-hint.valid { opacity: 1; color: var(--success); }
+
+        .input-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+        input {
+            width: 100%; box-sizing: border-box; background: var(--input); border: 1px solid #222;
+            padding: 18px; border-radius: 18px; color: #fff; font-size: 16px; outline: none; caret-color: transparent;
+        }
+        input:focus { border-color: #444; }
+
+        /* ПЛАВНЫЙ КУРСОР */
+        .custom-cursor {
+            position: absolute; left: 18px; width: 2px; height: 20px; background: var(--accent);
+            pointer-events: none; transition: transform 0.12s cubic-bezier(0.23, 1, 0.32, 1);
+            display: none; animation: blink 0.8s infinite;
+        }
+        input:focus + .custom-cursor { display: block; }
+
+        .btn-main { width: 100%; padding: 18px; background: var(--accent); color: #000; border: none; border-radius: 18px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-main:disabled { opacity: 0.2; }
+
+        .avatar-box { width: 100px; height: 100px; margin: 10px auto 25px; cursor: pointer; border-radius: 30px; background: var(--input); border: 2px dashed #333; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
+
+        .text-measurer { position: absolute; visibility: hidden; white-space: pre; font-size: 16px; font-family: inherit; }
+    </style>
+</head>
+<body>
+
+    <!-- ЕДИНЫЙ ЭКРАН ВХОДА И РЕГИСТРАЦИИ -->
+    <div class="container page active" id="authPage">
+        <img src="https://tenor.com" class="nft-gif">
+        <span class="logo">NFTVitya</span>
+        
+        <form id="mainForm" style="width: 100%;">
+            <div class="form-group">
+                <label>Имя пользователя <span id="uHint" class="req-hint">мин. 4 симв.</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="userInp" placeholder="vitya_nft" autocomplete="off" spellcheck="false" required>
+                    <div class="custom-cursor"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Пароль <span id="pHint" class="req-hint">8+ симв, A-Z, 0-9</span></label>
+                <div class="input-wrapper">
+                    <input type="password" id="passInp" placeholder="••••••••" required>
+                    <div class="custom-cursor"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-main" id="submitBtn" disabled>Продолжить</button>
+        </form>
+    </div>
+
+    <!-- ЭКРАН НАСТРОЙКИ АВАТАРА (ТОЛЬКО ДЛЯ НОВЫХ) -->
+    <div class="container page" id="setupPage">
+        <h2>Почти готово</h2>
+        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 25px;">Вы в шаге от создания. Выберите аватар.</p>
+        <div class="avatar-box" id="avatarBox" onclick="document.getElementById('fileInp').click()">
+            <span id="plus" style="font-size: 30px; color: #444;">+</span>
+            <img id="avatarImg" src="">
+        </div>
+        <input type="file" id="fileInp" accept="image/*" hidden onchange="handleFile(this)">
+        <button class="btn-main" onclick="finish(false)">Сохранить и войти</button>
+        <button onclick="finish(true)" style="background:none; border:none; color:var(--text-dim); margin-top:15px; cursor:pointer; text-decoration:underline;">Пропустить</button>
+    </div>
+
+    <div id="measurer" class="text-measurer"></div>
+
+    <script>
+        const measurer = document.getElementById('measurer');
+        let accounts = JSON.parse(localStorage.getItem('accounts')) || {};
+        let tempAvatar = '';
+        let currentUser = '';
+        let currentPass = '';
+
+        function setupField(id) {
+            const inp = document.getElementById(id);
+            const cursor = inp.nextElementSibling;
+            const update = () => {
+                inp.value = inp.value.replace(/[а-яё]/gi, ''); // Запрет кириллицы
+                measurer.textContent = inp.type === 'password' ? '•'.repeat(inp.value.length) : inp.value;
+                cursor.style.transform = `translateX(${measurer.offsetWidth}px)`;
+                validate();
+            };
+            inp.addEventListener('input', update);
+            inp.addEventListener('focus', update);
+        }
+
+        setupField('userInp');
+        setupField('passInp');
+
+        function validate() {
+            const u = document.getElementById('userInp').value;
+            const p = document.getElementById('passInp').value;
+            
+            const uValid = u.length >= 4;
+            const pValid = p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p);
+            
+            document.getElementById('uHint').className = 'req-hint ' + (u ? (uValid ? 'valid' : 'invalid') : '');
+            document.getElementById('pHint').className = 'req-hint ' + (p ? (pValid ? 'valid' : 'invalid') : '');
+            
+            document.getElementById('submitBtn').disabled = !(uValid && pValid);
+        }
+
+        document.getElementById('mainForm').onsubmit = (e) => {
+            e.preventDefault();
+            currentUser = document.getElementById('userInp').value;
+            currentPass = document.getElementById('passInp').value;
+
+            if (accounts[currentUser]) {
+                if (accounts[currentUser].password === currentPass) {
+                    login(currentUser);
+                } else {
+                    alert('Неверный пароль для этого пользователя!');
+                }
+            } else {
+                // Переход к аватару для нового юзера
+                document.getElementById('authPage').classList.remove('active');
+                document.getElementById('setupPage').classList.add('active');
+            }
+        };
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    tempAvatar = e.target.result;
+                    document.getElementById('avatarImg').src = tempAvatar;
+                    document.getElementById('avatarImg').style.display = 'block';
+                    document.getElementById('plus').style.display = 'none';
+                    document.getElementById('avatarBox').style.border = '2px solid var(--success)';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function finish(skip) {
+            accounts[currentUser] = { password: currentPass, avatar: skip ? '' : tempAvatar };
+            localStorage.setItem('accounts', JSON.stringify(accounts));
+            login(currentUser);
+        }
+
+        function login(user) {
+            localStorage.setItem('currentUser', user);
+            window.location.href = 'cabinet.html';
+        }
+    </script>
+</body>
+</html>
